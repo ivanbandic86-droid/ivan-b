@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react'
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { Banner, ConfirmProvider, Icon, ToastProvider, useConfirm } from './components/ui'
 import { AuthProvider, useAuth } from './lib/auth'
-import { db } from './lib/db'
+import { configProblem, db } from './lib/db'
 import { ListsProvider } from './lib/lists'
 import { outbox, useOnline, useOutbox } from './lib/sync'
 import Login from './pages/Login'
@@ -113,6 +113,16 @@ function Shell() {
 }
 
 export default function App() {
+  if (configProblem) {
+    return (
+      <div className="login">
+        <Banner kind="danger" icon="alert">
+          <strong>Aplikacija nije dobro postavljena.</strong><br />{configProblem}
+          <br />Ispravite varijable u postavkama objave (Vercel → Settings → Environment Variables) i napravite Redeploy.
+        </Banner>
+      </div>
+    )
+  }
   return (
     <ToastProvider>
       <ConfirmProvider>
