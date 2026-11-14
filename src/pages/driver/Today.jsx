@@ -17,8 +17,8 @@ export function useSubmit() {
   const toast = useToast()
   return async (item, label) => {
     const result = await submit(item)
-    if (result === 'sent') toast(`${label} je spremljeno.`)
-    else if (result === 'queued') toast(`${label} je na mobitelu. Poslat će se kad bude signala.`, 'warn')
+    if (result === 'sent') toast(`${label}: spremljeno.`)
+    else if (result === 'queued') toast(`${label}: spremljeno na mobitel. Poslat će se kad bude signala.`, 'warn')
     else toast(`Server je odbio unos: ${result.failed}`, 'danger')
     return result
   }
@@ -107,6 +107,7 @@ function DayCard({ log, vehicleId }) {
 }
 
 export default function Today() {
+  const { me } = useAuth()
   const L = useLists()
   const date = localDate()
   const day = useMyDay(date)
@@ -138,6 +139,8 @@ export default function Today() {
   const blank = () => setRide({ initial: rideToForm({ vehicle_id: vehicleId }) })
 
   const truckOrders = day.orders.filter((o) => L.vehicle(o.vehicle_id)?.category !== 'stroj')
+  const onMachine = day.orders.length > truckOrders.length ||
+    L.lists.vehicles.some((v) => v.category === 'stroj' && v.default_driver_id === me.id)
 
   return (
     <>
@@ -147,7 +150,9 @@ export default function Today() {
       </div>
 
       <Select label="Vozilo" value={vehicleId} onChange={setVehicleId} options={L.options.vehicles(vehicleId, 'vozilo')} placeholder="Odaberi vozilo…" />
-      {!vehicleId && <Banner kind="warn" icon="alert">Odaberite vozilo kojim danas vozite.</Banner>}
+      {!vehicleId && (onMachine
+        ? <Banner icon="machine">Radite na stroju? Sate upisujete u kartici Stroj. Za vožnju kamionom odaberite vozilo.</Banner>
+        : <Banner kind="warn" icon="alert">Odaberite vozilo kojim danas vozite.</Banner>)}
 
       {truckOrders.map((o) => {
         const done = day.rides.filter((r) => r.work_order_id === o.id).length

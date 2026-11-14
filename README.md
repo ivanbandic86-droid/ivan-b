@@ -1,34 +1,71 @@
-# Isporuke materijala
+# KiperLog
 
-Mobilna web aplikacija (PWA) u kojoj vozači kamiona mješalica i kipera unose isporuke, a ured ih
-pregledava uživo i izvozi u Excel. Radi i bez interneta: unosi se spremaju na mobitel i šalju kad se
-veza vrati.
+Mobilna web aplikacija (PWA) za građevinsku tvrtku s kamionima, kiperima i strojevima. Vozači i
+strojari unose vožnje, gorivo, kilometre i sate rada; ured uživo prati količine po gradilištu,
+potrošnju goriva i trošak, zadaje radne naloge, zaključava razdoblja i izvozi Excel.
 
-## Postavljanje
+Radi i bez signala: unosi se spremaju na mobitel i šalju sami kad se veza vrati.
 
-1. Na supabase.com napravite projekt.
-2. U SQL Editoru pokrenite `supabase/schema.sql`.
-3. Kopirajte `.env.example` u `.env` i upišite URL i `anon` ključ projekta (Project Settings → API).
-4. U Authentication → Users dodajte korisnike (e-mail i zaporka).
-5. Prvog korisnika za ured postavite u SQL Editoru (zamijenite e-mail svojim):
+## Što aplikacija radi
 
-   ```sql
-   update profiles set role = 'ured'
-   where id = (select id from auth.users where email = 'vas@email.hr');
-   ```
+**Vozač / strojar (mobitel)**
+- Prijava korisničkim imenom i PIN-om koje dodjeljuje ured.
+- Radni nalozi za danas s gumbom „+ Tura”: količina je već upisana, treba je samo potvrditi.
+- Vožnja bez naloga, „Ponovi zadnju”, vožnja bez tereta, fotografija otpremnice.
+- Radni dan (početni i završni km, vrijeme), točenje goriva, sati stroja po gradilištu.
+- Ispravak vlastitih unosa isti i sljedeći dan; starije ispravlja ured.
 
-   Ostale uloge i imena mijenjate u aplikaciji, u dijelu Popisi → Korisnici.
-6. Pokretanje: `npm install`, zatim `npm run dev`.
+**Ured (računalo ili mobitel)**
+- Pregled uživo: ture, m³ i tone (uvijek odvojeno), km, gorivo, sati strojeva, po gradilištu,
+  materijalu, vozaču, vozilu i danu.
+- Potrošnja goriva metodom punog tanka i trošak goriva raspoređen po gradilištima.
+- Unosi s ispravkom i brisanjem, radni nalozi, popisi, korisnici, Excel izvještaj.
+- Zaključavanje razdoblja i trag svih izmjena i brisanja.
 
-## Objava
+## Demo bez baze
 
-Povežite GitHub repozitorij s Vercelom ili Netlifyjem (build naredba `npm run build`, izlazna mapa
-`dist`) i u njihovim postavkama dodajte varijable `VITE_SUPABASE_URL` i `VITE_SUPABASE_ANON_KEY`.
-Vozači aplikaciju otvore u pregledniku mobitela i odaberu „Dodaj na početni zaslon”.
+Bez postavki baze aplikacija se pokreće u demo načinu s primjerima podataka koji ostaju samo u
+pregledniku. Tako se može isprobati prije spajanja Supabasea:
+
+```
+npm install
+npm run dev
+```
+
+## Postavljanje (jednom)
+
+1. Na supabase.com otvorite projekt (besplatni plan je dovoljan).
+2. U **SQL Editoru** zalijepite cijelu datoteku `supabase/schema.sql` i pokrenite je.
+3. **Authentication → Users → Add user**: upišite svoj e-mail i lozinku i uključite „Auto Confirm
+   User”. Prvi račun u sustavu automatski postaje ured.
+4. **Authentication → Sign In / Providers**: isključite „Allow new users to sign up”. Račune vozača
+   otvara ured u aplikaciji (Popisi → Korisnici), a to radi i s isključenom registracijom.
+5. Kopirajte `.env.example` u `.env` i upišite URL i `anon` ključ projekta
+   (Project Settings → API).
+6. Objava: povežite repozitorij s Vercelom ili Netlifyjem (build `npm run build`, izlazna mapa
+   `dist`) i u postavkama dodajte varijable `VITE_SUPABASE_URL` i `VITE_SUPABASE_ANON_KEY`.
+7. Prijavite se u aplikaciju (Ured, e-mail i lozinka), u **Popisima** unesite vozila, materijale,
+   naručitelje, gradilišta i lokacije te otvorite račune vozačima.
+
+Vozači aplikaciju otvore u pregledniku mobitela i odaberu „Dodaj na početni zaslon”. Prva prijava
+mora biti uz signal; nakon toga aplikacija radi i bez njega.
+
+Ako jedini korisnik ureda zaboravi lozinku, nova se postavlja u Supabaseu
+(Authentication → Users). Ostalima PIN ili lozinku mijenja ured u aplikaciji.
+
+## Testovi
+
+```
+npm test          # red čekanja, izračuni goriva i troška, datumi i brojevi
+npm run test:db   # shema i pravila pristupa na lokalnom Postgresu (ne dira Supabase)
+```
+
+`test:db` treba lokalni Postgres; naredba za spajanje zadaje se varijablom `PSQL`.
 
 ## Struktura
 
-- `src/pages/DriverEntry.jsx`: obrazac za vozače s redom čekanja za rad bez interneta
-- `src/pages/Deliveries.jsx`, `Lists.jsx`, `Reports.jsx`: uredski dio
-- `src/lib/offlineQueue.js`: lokalno spremanje i slanje
-- `supabase/schema.sql`: tablice i pravila pristupa
+- `supabase/schema.sql`: tablice, pravila pristupa, zaključavanje, trag izmjena, računi
+- `src/lib/outbox.js`, `sync.js`: red čekanja za rad bez signala
+- `src/lib/report.js`: zbrojevi, potrošnja metodom punog tanka, trošak po gradilištu
+- `src/lib/db.supabase.js`, `db.demo.js`: pristup bazi i demo način
+- `src/pages/driver`: ekrani vozača; `src/pages/office`: ekrani ureda

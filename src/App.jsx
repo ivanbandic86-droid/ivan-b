@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
-import { Banner, ConfirmProvider, Icon, ToastProvider } from './components/ui'
+import { Banner, ConfirmProvider, Icon, ToastProvider, useConfirm } from './components/ui'
 import { AuthProvider, useAuth } from './lib/auth'
 import { db } from './lib/db'
 import { ListsProvider } from './lib/lists'
@@ -18,13 +18,21 @@ const Office = lazy(() => import('./pages/office/Office'))
 function TopBar() {
   const { me, signOut } = useAuth()
   const online = useOnline()
+  const confirm = useConfirm()
+  const { items } = useOutbox()
+  const leave = async () => {
+    const waiting = items.length
+      ? `Na mobitelu ${items.length === 1 ? 'je 1 unos koji još nije poslan' : `je ${items.length} unosa koji još nisu poslani`}. Ostaju spremljeni i poslat će se kad se ponovno prijavite. Odjaviti se?`
+      : 'Odjaviti se?'
+    if (await confirm(waiting, 'Odjava')) signOut()
+  }
   return (
     <header className="topbar">
       <span className="brand"><span className="brand-mark">K</span> <span className="brand-name">KiperLog</span></span>
       <span className="who grow">{me.full_name}</span>
       {db.demo && <span className="chip accent">Demo</span>}
       {!online && <span className="chip warn"><Icon name="offline" size={14} /> Bez signala</span>}
-      <button type="button" className="ghost" onClick={signOut} aria-label="Odjava"><Icon name="logout" /></button>
+      <button type="button" className="ghost" onClick={leave} aria-label="Odjava"><Icon name="logout" /></button>
     </header>
   )
 }

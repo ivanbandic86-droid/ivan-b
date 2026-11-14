@@ -44,7 +44,8 @@ async function refresh() {
 export const outbox = createOutbox({
   store: deviceStore(),
   send,
-  isOnline: () => navigator.onLine,
+  // Bez prijavljenog korisnika se ništa ne šalje: unosi čekaju svog vozača.
+  isOnline: () => navigator.onLine && owner !== null,
   owner: () => owner,
   onChange: () => void refresh(),
 })
