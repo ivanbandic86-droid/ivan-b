@@ -1,70 +1,117 @@
-import { Navigate, Route, Routes, NavLink } from 'react-router-dom'
-import { configured } from './lib/supabase'
-import { AuthProvider, useAuth } from './lib/useAuth'
+import { lazy, Suspense } from 'react'
+import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
+import { Banner, ConfirmProvider, Icon, ToastProvider } from './components/ui'
+import { AuthProvider, useAuth } from './lib/auth'
+import { db } from './lib/db'
+import { ListsProvider } from './lib/lists'
+import { outbox, useOnline, useOutbox } from './lib/sync'
 import Login from './pages/Login'
-import DriverEntry from './pages/DriverEntry'
-import Deliveries from './pages/Deliveries'
-import Lists from './pages/Lists'
-import Reports from './pages/Reports'
+import Fuel from './pages/driver/Fuel'
+import History from './pages/driver/History'
+import Machine from './pages/driver/Machine'
+import Today from './pages/driver/Today'
+import { VehicleProvider } from './pages/driver/vehicle'
 
-function Shell() {
-  const { session, profile, signOut } = useAuth()
-  if (session === undefined) return <p className="center">Učitavanje…</p>
-  if (!session) return <Login />
-  if (!profile) return <p className="center">Učitavanje profila…</p>
-  if (!profile.active) return <p className="center">Račun je deaktiviran.</p>
+// Uredski dio se učitava tek kad zatreba, da vozačev dio ostane malen i brz.
+const Office = lazy(() => import('./pages/office/Office'))
 
-  const office = profile.role === 'ured'
+function TopBar() {
+  const { me, signOut } = useAuth()
+  const online = useOnline()
+  return (
+    <header className="topbar">
+      <span className="brand"><span className="brand-mark">K</span> <span className="brand-name">KiperLog</span></span>
+      <span className="who grow">{me.full_name}</span>
+      {db.demo && <span className="chip accent">Demo</span>}
+      {!online && <span className="chip warn"><Icon name="offline" size={14} /> Bez signala</span>}
+      <button type="button" className="ghost" onClick={signOut} aria-label="Odjava"><Icon name="logout" /></button>
+    </header>
+  )
+}
+
+// Stanje slanja: što čeka signal i što je server odbio.
+function SyncStatus() {
+  const { pending, failed } = useOutbox()
+  const online = useOnline()
+  if (!pending.length && !failed.length) return null
   return (
     <>
-      <header>
-        <strong>{profile.full_name}</strong>
-        <nav>
-          {office ? (
-            <>
-              <NavLink to="/isporuke">Isporuke</NavLink>
-              <NavLink to="/popisi">Popisi</NavLink>
-              <NavLink to="/izvjestaji">Izvještaji</NavLink>
-            </>
-          ) : (
-            <NavLink to="/unos">Unos</NavLink>
-          )}
-          <button className="link" onClick={signOut}>Odjava</button>
-        </nav>
-      </header>
-      <main>
-        <Routes>
-          {office ? (
-            <>
-              <Route path="/isporuke" element={<Deliveries />} />
-              <Route path="/popisi" element={<Lists />} />
-              <Route path="/izvjestaji" element={<Reports />} />
-              <Route path="*" element={<Navigate to="/isporuke" replace />} />
-            </>
-          ) : (
-            <>
-              <Route path="/unos" element={<DriverEntry />} />
-              <Route path="*" element={<Navigate to="/unos" replace />} />
-            </>
-          )}
-        </Routes>
-      </main>
+      {pending.length > 0 && (
+        <Banner kind="warn" icon="clock">
+          <strong>Čeka slanje: {pending.length}.</strong>{' '}
+          {online ? 'Šalje se…' : 'Unosi su na mobitelu i poslat će se sami kad bude signala.'}
+          {online && <> <button type="button" className="btn small" onClick={() => outbox.flush()}>Pošalji sada</button></>}
+        </Banner>
+      )}
+      {failed.length > 0 && (
+        <Banner kind="danger" icon="alert">
+          <strong>Server je odbio {failed.length === 1 ? 'jedan unos' : `${failed.length} unosa`}.</strong> Otvorite unos s oznakom
+          „Odbijeno” da vidite razlog.
+        </Banner>
+      )}
     </>
   )
 }
 
-export default function App() {
-  if (!configured) {
+function Driver() {
+  const tab = ({ isActive }) => (isActive ? 'active' : undefined)
+  return (
+    <VehicleProvider>
+      <TopBar />
+      <main className="page">
+        <SyncStatus />
+        <Routes>
+          <Route path="/" element={<Today />} />
+          <Route path="/gorivo" element={<Fuel />} />
+          <Route path="/stroj" element={<Machine />} />
+          <Route path="/unosi" element={<History />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+      <nav className="tabbar">
+        <NavLink to="/" end className={tab}><Icon name="home" /> Danas</NavLink>
+        <NavLink to="/gorivo" className={tab}><Icon name="fuel" /> Gorivo</NavLink>
+        <NavLink to="/stroj" className={tab}><Icon name="machine" /> Stroj</NavLink>
+        <NavLink to="/unosi" className={tab}><Icon name="list" /> Moji unosi</NavLink>
+      </nav>
+    </VehicleProvider>
+  )
+}
+
+function Shell() {
+  const { me, signOut } = useAuth()
+  if (me === undefined) return <p className="center">Učitavanje…</p>
+  if (!me) return <Login />
+  if (!me.active) {
     return (
-      <p className="center">
-        Nedostaju postavke baze. Kopirajte <code>.env.example</code> u <code>.env</code> i upišite
-        Supabase URL i ključ.
-      </p>
+      <div className="login">
+        <Banner kind="warn" icon="lock">Račun još nije aktiviran ili je deaktiviran. Javite se uredu.</Banner>
+        <button type="button" className="btn" onClick={signOut}>Odjava</button>
+      </div>
     )
   }
   return (
-    <AuthProvider>
-      <Shell />
-    </AuthProvider>
+    <ListsProvider>
+      {me.role === 'ured' ? (
+        <Suspense fallback={<p className="center">Učitavanje…</p>}>
+          <TopBar />
+          <Office />
+        </Suspense>
+      ) : (
+        <Driver />
+      )}
+    </ListsProvider>
+  )
+}
+
+export default function App() {
+  return (
+    <ToastProvider>
+      <ConfirmProvider>
+        <AuthProvider>
+          <Shell />
+        </AuthProvider>
+      </ConfirmProvider>
+    </ToastProvider>
   )
 }
