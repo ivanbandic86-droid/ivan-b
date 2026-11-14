@@ -36,7 +36,7 @@ export default function Machine() {
     localStorage.setItem(MACHINE, row.vehicle_id)
     await save({ id, kind: 'machine', row }, 'Sati stroja')
     setOrderId(null)
-    reset({ ...blank(), vehicle_id: form.vehicle_id, site_id: form.site_id })
+    reset({ ...blank(), vehicle_id: form.vehicle_id, site_id: form.site_id, custom_site: form.custom_site, custom_client: form.custom_client })
     setBusy(false)
   }
 

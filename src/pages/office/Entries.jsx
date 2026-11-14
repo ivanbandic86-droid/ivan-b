@@ -16,8 +16,8 @@ const KINDS = {
     Fields: RideFields, toForm: rideToForm, fromForm: rideFromForm, validate: validateRide,
     head: ['Datum', 'Vrijeme', 'Vozač', 'Vozilo', 'Gradilište', 'Materijal', ['m³', 'r'], ['t', 'r'], 'Relacija', 'Otpremnica', ''],
     cells: (r, L) => [
-      fmtDate(r.work_date), fmtTime(r.ride_at), L.userName(r.driver_id), L.vehicleName(r.vehicle_id), L.siteName(r.site_id),
-      r.is_empty ? 'Bez tereta' : L.materialName(r.material_id), [r.quantity_m3 != null ? fmt(r.quantity_m3) : '–', 'r'],
+      fmtDate(r.work_date), fmtTime(r.ride_at), L.userName(r.driver_id), L.vehicleName(r.vehicle_id), L.siteOf(r),
+      L.materialOf(r), [r.quantity_m3 != null ? fmt(r.quantity_m3) : '–', 'r'],
       [r.quantity_t != null ? fmt(r.quantity_t) : '–', 'r'],
       [L.locationName(r.load_location_id), L.locationName(r.unload_location_id)].filter(Boolean).join(' → '),
       r.delivery_note ?? '', r.photo_path ? <Icon name="camera" size={18} /> : '',
@@ -36,7 +36,7 @@ const KINDS = {
     label: 'Strojevi', title: 'Sati stroja', order: [['work_date', false]],
     Fields: MachineFields, toForm: machineToForm, fromForm: machineFromForm, validate: validateMachine,
     head: ['Datum', 'Strojar', 'Stroj', 'Gradilište', ['Sati', 'r'], 'Opis rada'],
-    cells: (r, L) => [fmtDate(r.work_date), L.userName(r.driver_id), L.vehicleName(r.vehicle_id), L.siteName(r.site_id), [fmt(r.hours, 1), 'r'], r.activity ?? ''],
+    cells: (r, L) => [fmtDate(r.work_date), L.userName(r.driver_id), L.vehicleName(r.vehicle_id), L.siteOf(r), [fmt(r.hours, 1), 'r'], r.activity ?? ''],
   },
   day_logs: {
     label: 'Radni dani', title: 'Radni dan', order: [['work_date', false]],

@@ -180,7 +180,7 @@ export default function Today() {
           <button type="button" className="btn dark block" onClick={repeat} style={{ justifyContent: 'flex-start', textAlign: 'left' }}>
             <Icon name="refresh" />
             <span className="grow">Ponovi zadnju<br /><span className="small" style={{ fontWeight: 500, opacity: 0.8 }}>
-              {L.materialName(last.material_id)} · {L.siteName(last.site_id)} · {qtyLabel(last.quantity_m3, last.quantity_t)}
+              {L.materialOf(last)} · {L.siteOf(last)} · {qtyLabel(last.quantity_m3, last.quantity_t)}
             </span></span>
           </button>
         )}

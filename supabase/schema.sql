@@ -274,11 +274,15 @@ create table rides (
   id uuid primary key,
   driver_id uuid not null references profiles,
   vehicle_id uuid not null references vehicles,
-  site_id uuid not null references sites,
-  material_id uuid references materials,
+  site_id uuid references sites,             -- prazno + custom_site = vozač je odabrao "Ostalo"
+  material_id uuid references materials,     -- prazno + custom_material = "Ostalo"
   load_location_id uuid references locations,
   unload_location_id uuid references locations,
   work_order_id uuid references work_orders on delete set null,
+  custom_site text,
+  custom_client text,
+  custom_material text,
+  needs_review boolean generated always as (site_id is null or (material_id is null and not is_empty)) stored,
   ride_at timestamptz not null,
   work_date date not null,
   is_empty boolean not null default false,   -- vožnja bez tereta
@@ -290,9 +294,12 @@ create table rides (
   photo_path text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  check (is_empty or (material_id is not null and (quantity_m3 is not null or quantity_t is not null)))
+  check (site_id is not null or nullif(trim(custom_site), '') is not null),
+  check (is_empty or ((material_id is not null or nullif(trim(custom_material), '') is not null)
+    and (quantity_m3 is not null or quantity_t is not null)))
 );
 create index on rides (work_date);
+create index on rides (work_date) where needs_review;
 create index on rides (driver_id, work_date);
 
 create table day_logs (
@@ -316,15 +323,20 @@ create table machine_logs (
   id uuid primary key,
   driver_id uuid not null references profiles,
   vehicle_id uuid not null references vehicles,
-  site_id uuid not null references sites,
+  site_id uuid references sites,
+  custom_site text,
+  custom_client text,
+  needs_review boolean generated always as (site_id is null) stored,
   work_order_id uuid references work_orders on delete set null,
   work_date date not null,
   hours numeric(5,2) not null check (hours > 0 and hours <= 24),
   activity text,
   note text,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  check (site_id is not null or nullif(trim(custom_site), '') is not null)
 );
+create index on machine_logs (work_date) where needs_review;
 create index on machine_logs (work_date);
 
 create table fuel_entries (

@@ -96,8 +96,8 @@ export default function DayEntries({ day, onlyExtras }) {
               <button key={r.id} type="button" className="item" onClick={() => setOpen({ kind: 'ride', row: r })}>
                 <span className="time">{fmtTime(r.ride_at)}</span>
                 <span className="grow">
-                  <span className="title">{r.is_empty ? 'Bez tereta' : L.materialName(r.material_id)}</span>
-                  <span className="small muted"> · {L.siteName(r.site_id)}</span>
+                  <span className="title">{L.materialOf(r)}</span>
+                  <span className="small muted"> · {L.siteOf(r)}</span>
                   <br />
                   <span className="small muted">
                     {[qtyLabel(r.quantity_m3, r.quantity_t), L.vehicleName(r.vehicle_id), r.delivery_note && `otpr. ${r.delivery_note}`].filter(Boolean).join(' · ')}
@@ -132,7 +132,7 @@ export default function DayEntries({ day, onlyExtras }) {
                 <span className="time">{fmt(m.hours, 1)} h</span>
                 <span className="grow">
                   <span className="title">{L.vehicleName(m.vehicle_id)}</span>
-                  <span className="small muted"> · {L.siteName(m.site_id)}{m.activity ? ` · ${m.activity}` : ''}</span>
+                  <span className="small muted"> · {L.siteOf(m)}{m.activity ? ` · ${m.activity}` : ''}</span>
                 </span>
                 <Status row={m} />
               </button>

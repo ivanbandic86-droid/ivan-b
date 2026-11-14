@@ -57,7 +57,7 @@ function Breakdown({ report }) {
   const L = useLists()
   const [dim, setDim] = useState('site_id')
   const name = {
-    site_id: L.siteName, material_id: (id) => (id ? L.materialName(id) : 'Bez tereta'),
+    site_id: L.siteName, material_id: (id) => (id ? L.materialName(id) : 'Bez tereta ili ostalo (čeka obradu)'),
     driver_id: L.userName, vehicle_id: L.vehicleName, work_date: fmtDate,
   }[dim]
   const groups = report.by(dim).sort((a, b) => (dim === 'work_date' ? String(a.key).localeCompare(b.key) : b.trips + b.emptyTrips - a.trips - a.emptyTrips))

@@ -53,8 +53,14 @@ export function ListsProvider({ children }) {
       lists, ready, reload,
       vehicle: (id) => by.vehicles.get(id),
       vehicleName: (id) => by.vehicles.get(id)?.code ?? '–',
-      siteName: (id) => by.sites.get(id)?.name ?? '–',
+      siteName: (id) => (id == null ? 'Ostalo (čeka obradu)' : by.sites.get(id)?.name ?? '–'),
       materialName: (id) => by.materials.get(id)?.name ?? '–',
+      // Naziv za unos: s popisa, ili tekst koji je vozač upisao pod "Ostalo".
+      siteOf: (r) => (r.site_id ? by.sites.get(r.site_id)?.name ?? '–' : r.custom_site ? `${r.custom_site} (ostalo)` : '–'),
+      materialOf: (r) =>
+        r.is_empty ? 'Bez tereta'
+          : r.material_id ? by.materials.get(r.material_id)?.name ?? '–'
+          : r.custom_material ? `${r.custom_material} (ostalo)` : '–',
       material: (id) => by.materials.get(id),
       locationName: (id) => by.locations.get(id)?.name ?? '',
       clientName: (id) => by.clients.get(id)?.name ?? '',

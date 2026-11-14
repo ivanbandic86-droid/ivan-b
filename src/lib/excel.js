@@ -29,8 +29,8 @@ export async function downloadReport(from, to, L) {
       ['m³', 10], ['t', 10], ['Utovar', 22], ['Istovar', 22], ['Br. otpremnice', 15], ['Primatelj', 18], ['Napomena', 28]],
     rides.map((r) => [
       r.work_date, fmtTime(r.ride_at), L.userName(r.driver_id), L.vehicleName(r.vehicle_id),
-      L.clientName(L.lists.sites.find((s) => s.id === r.site_id)?.client_id), L.siteName(r.site_id),
-      r.is_empty ? 'Bez tereta' : L.materialName(r.material_id), r.quantity_m3 != null ? Number(r.quantity_m3) : null,
+      r.site_id ? L.clientName(L.lists.sites.find((s) => s.id === r.site_id)?.client_id) : r.custom_client ?? '', L.siteOf(r),
+      L.materialOf(r), r.quantity_m3 != null ? Number(r.quantity_m3) : null,
       r.quantity_t != null ? Number(r.quantity_t) : null, L.locationName(r.load_location_id), L.locationName(r.unload_location_id),
       r.delivery_note, r.recipient, r.note,
     ]))
@@ -58,7 +58,7 @@ export async function downloadReport(from, to, L) {
   sheet(wb, 'Po gradilištu',
     [['Gradilište', 28], ['Ture s teretom', 15], ['Vožnje bez tereta', 17], ['m³', 12], ['t', 12], ['Gorivo (L)', 12], ['Trošak goriva (€)', 17], ['€/m³', 10], ['€/t', 10]],
     siteRows)
-  summary('Po materijalu', 'material_id', 'Materijal', (id) => (id ? L.materialName(id) : 'Bez tereta'))
+  summary('Po materijalu', 'material_id', 'Materijal', (id) => (id ? L.materialName(id) : 'Bez tereta ili ostalo (čeka obradu)'))
   summary('Po vozaču', 'driver_id', 'Vozač', L.userName)
   summary('Po vozilu', 'vehicle_id', 'Vozilo', L.vehicleName)
   summary('Po danu', 'work_date', 'Datum', (d) => d)
@@ -79,7 +79,7 @@ export async function downloadReport(from, to, L) {
     }))
   sheet(wb, 'Strojevi',
     [['Datum', 12], ['Strojar', 22], ['Stroj', 14], ['Gradilište', 24], ['Sati', 9], ['Opis rada', 30]],
-    report.machineLogs.map((m) => [m.work_date, L.userName(m.driver_id), L.vehicleName(m.vehicle_id), L.siteName(m.site_id), Number(m.hours), m.activity]))
+    report.machineLogs.map((m) => [m.work_date, L.userName(m.driver_id), L.vehicleName(m.vehicle_id), L.siteOf(m), Number(m.hours), m.activity]))
   sheet(wb, 'Radni dani',
     [['Datum', 12], ['Vozač', 22], ['Vozilo', 14], ['Početni km', 12], ['Završni km', 12], ['Prijeđeno km', 13], ['Početak', 9], ['Kraj', 9], ['Sati', 8]],
     report.dayLogs.map((d) => [

@@ -12,6 +12,7 @@ Radi i bez signala: unosi se spremaju na mobitel i šalju sami kad se veza vrati
 - Prijava korisničkim imenom i PIN-om koje dodjeljuje ured.
 - Radni nalozi za danas s gumbom „+ Tura”: količina je već upisana, treba je samo potvrditi.
 - Vožnja bez naloga, „Ponovi zadnju”, vožnja bez tereta, fotografija otpremnice.
+- Ako gradilište, naručitelj ili materijal nisu u izborniku, vozač odabere „Ostalo” i upiše ih sam.
 - Radni dan (početni i završni km, vrijeme), točenje goriva, sati stroja po gradilištu.
 - Ispravak vlastitih unosa isti i sljedeći dan; starije ispravlja ured.
 
@@ -19,6 +20,8 @@ Radi i bez signala: unosi se spremaju na mobitel i šalju sami kad se veza vrati
 - Pregled uživo: ture, m³ i tone (uvijek odvojeno), km, gorivo, sati strojeva, po gradilištu,
   materijalu, vozaču, vozilu i danu.
 - Potrošnja goriva metodom punog tanka i trošak goriva raspoređen po gradilištima.
+- „Za obradu”: gradilišta, naručitelji i materijali koje su vozači upisali pod „Ostalo”; ured ih jednim
+  klikom dodijeli stavci s popisa ili doda u popis, za sve unose odjednom.
 - Unosi s ispravkom i brisanjem, radni nalozi, popisi, korisnici, Excel izvještaj.
 - Zaključavanje razdoblja i trag svih izmjena i brisanja.
 
@@ -52,6 +55,12 @@ mora biti uz signal; nakon toga aplikacija radi i bez njega.
 
 Ako jedini korisnik ureda zaboravi lozinku, nova se postavlja u Supabaseu
 (Authentication → Users). Ostalima PIN ili lozinku mijenja ured u aplikaciji.
+
+## Nadogradnja postojeće baze
+
+Ako ste bazu postavili prije neke izmjene, u SQL Editoru jednom pokrenite pripadajuću datoteku iz
+`supabase/migrations/` (po redu): `001_delete_user.sql` (brisanje korisnika) i
+`002_other_option.sql` (opcija „Ostalo”). Nova postavljanja koriste samo `schema.sql`.
 
 ## Testovi
 

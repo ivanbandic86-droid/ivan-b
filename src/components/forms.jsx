@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { compressImage } from '../lib/image'
 import { useLists } from '../lib/lists'
 import { parseNum } from '../lib/num'
-import { Check, Field, Icon, Num, Select, Text, useToast } from './ui'
+import { Check, Field, Icon, Num, OTHER, Select, Text, useToast } from './ui'
 
 const numError = (v, { required } = {}) => {
   const n = parseNum(v)
@@ -18,8 +18,13 @@ export const text = (v) => (v && String(v).trim() ? String(v).trim() : null)
 // ---------------------------------------------------------------------------
 // Vožnja
 
+// Gradilište i materijal: s popisa, ili OTHER uz tekst koji vozač upiše.
+const siteChoice = (r) => r.site_id ?? (r.custom_site ? OTHER : null)
+const custom = (f, key) => (f[key] ? text(f[key]) : null)
+
 export const rideToForm = (r = {}) => ({
-  vehicle_id: r.vehicle_id ?? null, site_id: r.site_id ?? null, material_id: r.material_id ?? null,
+  custom_site: r.custom_site ?? '', custom_client: r.custom_client ?? '', custom_material: r.custom_material ?? '',
+  vehicle_id: r.vehicle_id ?? null, site_id: siteChoice(r), material_id: r.material_id ?? (r.custom_material ? OTHER : null),
   load_location_id: r.load_location_id ?? null, unload_location_id: r.unload_location_id ?? null,
   is_empty: r.is_empty ?? false, m3: r.quantity_m3 ?? '', t: r.quantity_t ?? '',
   delivery_note: r.delivery_note ?? '', recipient: r.recipient ?? '', note: r.note ?? '',
@@ -29,8 +34,10 @@ export function validateRide(f) {
   const e = {}
   if (!f.vehicle_id) e.vehicle_id = 'Odaberite vozilo'
   if (!f.site_id) e.site_id = 'Odaberite gradilište'
+  else if (f.site_id === OTHER && !text(f.custom_site)) e.custom_site = 'Upišite gradilište'
   if (!f.is_empty) {
     if (!f.material_id) e.material_id = 'Odaberite materijal'
+    else if (f.material_id === OTHER && !text(f.custom_material)) e.custom_material = 'Upišite materijal'
     e.m3 = positive(f.m3)
     e.t = positive(f.t)
     if (!e.m3 && !e.t && parseNum(f.m3) === null && parseNum(f.t) === null) e.m3 = 'Upišite količinu u m³ ili t'
@@ -39,14 +46,36 @@ export function validateRide(f) {
 }
 
 export const rideFromForm = (f) => ({
-  vehicle_id: f.vehicle_id, site_id: f.site_id,
-  material_id: f.is_empty ? null : f.material_id,
+  vehicle_id: f.vehicle_id,
+  site_id: f.site_id === OTHER ? null : f.site_id,
+  custom_site: f.site_id === OTHER ? custom(f, 'custom_site') : null,
+  custom_client: f.site_id === OTHER ? custom(f, 'custom_client') : null,
+  material_id: f.is_empty || f.material_id === OTHER ? null : f.material_id,
+  custom_material: !f.is_empty && f.material_id === OTHER ? custom(f, 'custom_material') : null,
   load_location_id: f.load_location_id, unload_location_id: f.unload_location_id,
   is_empty: f.is_empty,
   quantity_m3: f.is_empty ? null : parseNum(f.m3),
   quantity_t: f.is_empty ? null : parseNum(f.t),
   delivery_note: text(f.delivery_note), recipient: text(f.recipient), note: text(f.note),
 })
+
+// Gradilište s opcijom "Ostalo": vozač upiše gradilište i naručitelja, a ured ih poslije uredi.
+function SiteFields({ form, set, errors }) {
+  const L = useLists()
+  return (
+    <>
+      <Select label="Gradilište" value={form.site_id} onChange={(v) => set({ site_id: v })} options={L.options.sites(form.site_id)} other />
+      {errors.site_id && <span className="field-error small">{errors.site_id}</span>}
+      {form.site_id === OTHER && (
+        <>
+          <Text label="Gradilište (upišite)" hint="ured će ga urediti" value={form.custom_site} onChange={(v) => set({ custom_site: v })} />
+          {errors.custom_site && <span className="field-error small">{errors.custom_site}</span>}
+          <Text label="Naručitelj (upišite)" hint="ako ga znate" value={form.custom_client} onChange={(v) => set({ custom_client: v })} />
+        </>
+      )}
+    </>
+  )
+}
 
 export function RideFields({ form, set, errors, photo, setPhoto, withVehicle, quick }) {
   const L = useLists()
@@ -73,13 +102,16 @@ export function RideFields({ form, set, errors, photo, setPhoto, withVehicle, qu
           options={L.options.vehicles(form.vehicle_id, 'vozilo')} />
       )}
       {errors.vehicle_id && <span className="field-error small">{errors.vehicle_id}</span>}
-      <Select label="Gradilište" value={form.site_id} onChange={(v) => set({ site_id: v })} options={L.options.sites(form.site_id)} />
-      {errors.site_id && <span className="field-error small">{errors.site_id}</span>}
+      <SiteFields form={form} set={set} errors={errors} />
       <Check label="Vožnja bez tereta" checked={form.is_empty} onChange={(v) => set({ is_empty: v })} />
       {!form.is_empty && (
-        <Select label="Materijal" value={form.material_id} onChange={(v) => set({ material_id: v })} options={L.options.materials(form.material_id)} />
+        <Select label="Materijal" value={form.material_id} onChange={(v) => set({ material_id: v })} options={L.options.materials(form.material_id)} other />
       )}
       {errors.material_id && <span className="field-error small">{errors.material_id}</span>}
+      {!form.is_empty && form.material_id === OTHER && (
+        <Text label="Materijal (upišite)" hint="ured će ga urediti" value={form.custom_material} onChange={(v) => set({ custom_material: v })} />
+      )}
+      {errors.custom_material && <span className="field-error small">{errors.custom_material}</span>}
     </>
   )
   // Glavna jedinica materijala je prva; druga se upisuje ako je poznata (npr. s vage).
@@ -128,13 +160,13 @@ export function RideFields({ form, set, errors, photo, setPhoto, withVehicle, qu
   // Tura po nalogu ili ponovljena tura: sve je već zadano, pa je količina na vrhu,
   // a ostalo se otvara samo ako treba nešto promijeniti.
   if (quick) {
-    const wrong = errors.vehicle_id || errors.site_id || errors.material_id
+    const wrong = errors.vehicle_id || errors.site_id || errors.material_id || errors.custom_site || errors.custom_material
     return (
       <>
         <div>
-          <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{form.is_empty ? 'Bez tereta' : L.materialName(form.material_id)}</div>
+          <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{form.is_empty ? 'Bez tereta' : form.material_id === OTHER ? form.custom_material || 'Ostalo' : L.materialName(form.material_id)}</div>
           <div className="muted">
-            {[L.siteName(form.site_id), L.locationName(form.load_location_id) && `utovar ${L.locationName(form.load_location_id)}`, L.vehicleName(form.vehicle_id)].filter(Boolean).join(' · ')}
+            {[form.site_id === OTHER ? form.custom_site || 'Ostalo' : L.siteName(form.site_id), L.locationName(form.load_location_id) && `utovar ${L.locationName(form.load_location_id)}`, L.vehicleName(form.vehicle_id)].filter(Boolean).join(' · ')}
           </div>
         </div>
         {quantity}
@@ -219,20 +251,25 @@ export function FuelFields({ form, set, errors }) {
 // Sati stroja
 
 export const machineToForm = (r = {}) => ({
-  vehicle_id: r.vehicle_id ?? null, site_id: r.site_id ?? null, hours: r.hours ?? '', activity: r.activity ?? '',
+  vehicle_id: r.vehicle_id ?? null, site_id: siteChoice(r), hours: r.hours ?? '', activity: r.activity ?? '',
+  custom_site: r.custom_site ?? '', custom_client: r.custom_client ?? '',
 })
 
 export function validateMachine(f) {
   const e = {
     vehicle_id: f.vehicle_id ? null : 'Odaberite stroj',
     site_id: f.site_id ? null : 'Odaberite gradilište',
+    custom_site: f.site_id === OTHER && !text(f.custom_site) ? 'Upišite gradilište' : null,
     hours: positive(f.hours, { required: true }) ?? (parseNum(f.hours) > 24 ? 'Najviše 24 sata' : null),
   }
   return Object.fromEntries(Object.entries(e).filter(([, v]) => v))
 }
 
 export const machineFromForm = (f) => ({
-  vehicle_id: f.vehicle_id, site_id: f.site_id, hours: parseNum(f.hours), activity: text(f.activity),
+  vehicle_id: f.vehicle_id, site_id: f.site_id === OTHER ? null : f.site_id,
+  custom_site: f.site_id === OTHER ? custom(f, 'custom_site') : null,
+  custom_client: f.site_id === OTHER ? custom(f, 'custom_client') : null,
+  hours: parseNum(f.hours), activity: text(f.activity),
 })
 
 export function MachineFields({ form, set, errors }) {
@@ -241,8 +278,7 @@ export function MachineFields({ form, set, errors }) {
     <>
       <Select label="Stroj" value={form.vehicle_id} onChange={(v) => set({ vehicle_id: v })} options={L.options.vehicles(form.vehicle_id, 'stroj')} />
       {errors.vehicle_id && <span className="field-error small">{errors.vehicle_id}</span>}
-      <Select label="Gradilište" value={form.site_id} onChange={(v) => set({ site_id: v })} options={L.options.sites(form.site_id)} />
-      {errors.site_id && <span className="field-error small">{errors.site_id}</span>}
+      <SiteFields form={form} set={set} errors={errors} />
       <Num big label="Sati rada" value={form.hours} error={errors.hours} onChange={(v) => set({ hours: v })} placeholder="0" />
       <Text label="Opis rada" hint="npr. iskop rova" value={form.activity} onChange={(v) => set({ activity: v })} />
     </>
@@ -289,7 +325,11 @@ export function DayFields({ form, set, errors }) {
 export function useForm(initial, validate) {
   const [form, setForm] = useState(initial)
   const [errors, setErrors] = useState({})
-  const set = (patch) => setForm((f) => ({ ...f, ...patch }))
+  // Greška polja nestaje čim se polje promijeni.
+  const set = (patch) => {
+    setForm((f) => ({ ...f, ...patch }))
+    setErrors((e) => Object.fromEntries(Object.entries(e).filter(([k]) => !(k in patch))))
+  }
   const check = () => {
     const e = validate(form)
     setErrors(e)

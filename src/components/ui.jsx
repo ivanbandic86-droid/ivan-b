@@ -46,7 +46,9 @@ export function Field({ label, hint, error, children }) {
   )
 }
 
-export function Select({ label, hint, value, onChange, options, placeholder = 'Odaberi…', required, disabled }) {
+export const OTHER = '__other'
+
+export function Select({ label, hint, value, onChange, options, placeholder = 'Odaberi…', required, disabled, other }) {
   return (
     <Field label={label} hint={hint}>
       <select value={value ?? ''} onChange={(e) => onChange(e.target.value || null)} required={required} disabled={disabled}>
@@ -54,6 +56,7 @@ export function Select({ label, hint, value, onChange, options, placeholder = 'O
         {options.map(([v, l]) => (
           <option key={v} value={v}>{l}</option>
         ))}
+        {other && <option value={OTHER}>Ostalo (upišem sam)</option>}
       </select>
     </Field>
   )

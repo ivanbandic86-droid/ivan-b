@@ -156,10 +156,15 @@ export function createDemoDb() {
     !ENTRY_TABLES.includes(own) && own !== 'work_orders' &&
     ['rides', 'day_logs', 'machine_logs', 'fuel_entries', 'work_orders', 'sites'].some((t) => state[t].some((r) => LINKS.some((k) => r[k] === id)))
 
+  // Kao izračunati stupac needs_review u pravoj bazi.
+  const needsReview = (table, r) =>
+    table === 'rides' ? !r.site_id || (!r.material_id && !r.is_empty) : table === 'machine_logs' ? !r.site_id : false
+  const field = (table, r, k) => (k === 'needs_review' ? needsReview(table, r) : r[k])
+
   function select(table, { eq = {}, gte = {}, lte = {}, order = [] } = {}) {
     let rows = state[table].filter(
       (r) =>
-        Object.entries(eq).every(([k, v]) => r[k] === v) &&
+        Object.entries(eq).every(([k, v]) => field(table, r, k) === v) &&
         Object.entries(gte).every(([k, v]) => r[k] >= v) &&
         Object.entries(lte).every(([k, v]) => r[k] <= v),
     )

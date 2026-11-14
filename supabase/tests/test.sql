@@ -225,6 +225,27 @@ select t_fails(format($$insert into rides (id, driver_id, vehicle_id, site_id, r
   values (gen_random_uuid(), %L, '10000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001', now(), today_hr(), true)$$, :'marko'),
   '42501', 'deaktivirani vozac ne moze unositi');
 
+-- Opcija "Ostalo"
+select t_as(:'ante');
+insert into rides (id, driver_id, vehicle_id, site_id, material_id, custom_site, custom_client, custom_material, ride_at, work_date, quantity_m3)
+values ('60000000-0000-0000-0000-0000000000f1', :'ante', '10000000-0000-0000-0000-000000000001', null, null,
+  'Privatno gradiliste Kastel Sucurac', 'Ivo Ivic', 'Crni tucanik', now(), today_hr(), 10);
+select t_eq((select needs_review from rides where id = '60000000-0000-0000-0000-0000000000f1'), true, 'voznja s upisanim gradilistem ceka obradu');
+select t_fails(format($$insert into rides (id, driver_id, vehicle_id, ride_at, work_date, is_empty)
+  values (gen_random_uuid(), %L, '10000000-0000-0000-0000-000000000001', now(), today_hr(), true)$$, :'ante'),
+  '23514', 'bez gradilista s popisa i bez upisanog teksta se odbija');
+select t_fails(format($$insert into rides (id, driver_id, vehicle_id, site_id, custom_material, ride_at, work_date, quantity_m3)
+  values (gen_random_uuid(), %L, '10000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001', '  ', now(), today_hr(), 5)$$, :'ante'),
+  '23514', 'prazan upisani materijal se odbija');
+insert into machine_logs (id, driver_id, vehicle_id, site_id, custom_site, work_date, hours)
+values (gen_random_uuid(), :'ante', '10000000-0000-0000-0000-000000000002', null, 'Nova lokacija', today_hr(), 3);
+select t_eq((select count(*) from machine_logs where needs_review), 1::bigint, 'sati stroja na upisanom gradilistu cekaju obradu');
+select t_as(:'ured');
+select t_eq((select count(*) from rides where needs_review), 1::bigint, 'ured vidi voznje za obradu');
+select t_rows($$update rides set site_id = '40000000-0000-0000-0000-000000000001', material_id = '20000000-0000-0000-0000-000000000001',
+  custom_site = null, custom_client = null, custom_material = null where needs_review$$, 1, 'ured dodjeljuje stavke s popisa');
+select t_eq((select count(*) from rides where needs_review), 0::bigint, 'nakon dodjele voznja vise ne ceka obradu');
+
 -- Brisanje racuna
 select t_as(:'ured');
 select t_fails(format($$select delete_user(%L)$$, :'marko'), '22023', 'racun s unosima se ne moze obrisati');
