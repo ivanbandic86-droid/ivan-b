@@ -5,7 +5,7 @@ const PAGE = 1000
 const MESSAGES = {
   42501: 'Nemate pravo na ovu radnju ili je razdoblje zaključano.',
   23505: 'Takav zapis već postoji.',
-  23503: 'Zapis se koristi u unosima pa se ne može obrisati.',
+  23503: 'Stavka se koristi u unosima ili nalozima pa se ne može obrisati. Umjesto toga je deaktivirajte.',
   23514: 'Vrijednost nije ispravna.',
 }
 

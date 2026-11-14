@@ -150,6 +150,12 @@ export function createDemoDb() {
   const denied = () => ({ error: { code: '42501', message: 'row-level security' }, status: 403 })
   const LOCKED = 'Unos se više ne može mijenjati: zaključan je ili je prošao rok za ispravak.'
 
+  // Koristi li se zapis negdje drugdje (kao strani ključ u bazi)?
+  const LINKS = ['driver_id', 'vehicle_id', 'site_id', 'material_id', 'load_location_id', 'unload_location_id', 'client_id', 'created_by']
+  const used = (id, own) =>
+    !ENTRY_TABLES.includes(own) && own !== 'work_orders' &&
+    ['rides', 'day_logs', 'machine_logs', 'fuel_entries', 'work_orders', 'sites'].some((t) => state[t].some((r) => LINKS.some((k) => r[k] === id)))
+
   function select(table, { eq = {}, gte = {}, lte = {}, order = [] } = {}) {
     let rows = state[table].filter(
       (r) =>
@@ -233,6 +239,13 @@ export function createDemoDb() {
         return id
       }
       if (name === 'set_user_secret') return null
+      if (name === 'delete_user') {
+        if (used(args.p_user, 'profiles')) throw new Error('Korisnik ima unose ili naloge pa se ne može obrisati. Deaktivirajte ga.')
+        state.profiles = state.profiles.filter((p) => p.id !== args.p_user)
+        for (const v of state.vehicles) if (v.default_driver_id === args.p_user) v.default_driver_id = null
+        persist()
+        return null
+      }
       throw new Error(`Nepoznata funkcija ${name}`)
     },
     insert: async (table, row) => insert(table, row),
@@ -263,6 +276,7 @@ export function createDemoDb() {
     async remove(table, id) {
       const row = state[table].find((r) => r.id === id)
       if (!row || (ENTRY_TABLES.includes(table) && locked(row))) throw new Error(LOCKED)
+      if (used(id, table)) throw new Error('Stavka se koristi u unosima ili nalozima pa se ne može obrisati. Umjesto toga je deaktivirajte.')
       state[table] = state[table].filter((r) => r.id !== id)
       audit(table, 'delete', row)
       persist()

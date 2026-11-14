@@ -225,6 +225,23 @@ select t_fails(format($$insert into rides (id, driver_id, vehicle_id, site_id, r
   values (gen_random_uuid(), %L, '10000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001', now(), today_hr(), true)$$, :'marko'),
   '42501', 'deaktivirani vozac ne moze unositi');
 
+-- Brisanje racuna
+select t_as(:'ured');
+select t_fails(format($$select delete_user(%L)$$, :'marko'), '22023', 'racun s unosima se ne moze obrisati');
+select t_fails($$select delete_user('00000000-0000-0000-0000-0000000000a1')$$, '22023', 'vlastiti racun se ne moze obrisati');
+select create_user('proba', 'Proba Probic', 'vozac', '111222') as proba \gset
+select delete_user(:'proba');
+select t_eq((select count(*) from profiles where username = 'proba'), 0::bigint, 'racun bez unosa je obrisan zajedno s profilom');
+reset role;
+select t_eq((select count(*) from auth.users where email = 'proba@kiperlog.local') + (select count(*) from auth.identities where user_id = :'proba'), 0::bigint, 'obrisana je i prijava racuna');
+set role authenticated;
+select t_as(:'ante');
+select t_fails(format($$select delete_user(%L)$$, :'stranac'), '42501', 'vozac ne moze brisati racune');
+select t_as(:'ured');
+select t_fails($$delete from locations where id = '50000000-0000-0000-0000-000000000001'$$, '23503', 'stavka popisa koja se koristi u unosima ne moze se obrisati');
+insert into materials (id, name) values ('20000000-0000-0000-0000-000000000009', 'Pijesak');
+select t_rows($$delete from materials where id = '20000000-0000-0000-0000-000000000009'$$, 1, 'nekoristena stavka popisa se brise');
+
 -- Fotografije otpremnica
 select t_as(:'ante');
 insert into storage.objects (bucket_id, name) values ('otpremnice', :'ante' || '/a.jpg');

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Banner, Check, Dialog, Icon, Num, Seg, Select, Text, useAction } from '../../components/ui'
+import { Banner, Check, Dialog, Icon, Num, Seg, Select, Text, useAction, useConfirm } from '../../components/ui'
 import { useAuth } from '../../lib/auth'
 import { db } from '../../lib/db'
 import { KIND_LABEL, useLists } from '../../lib/lists'
@@ -98,6 +98,7 @@ function ItemDialog({ table, item, onClose, onSaved }) {
   const cfg = TABLES[table]
   const L = useLists()
   const [run, busy] = useAction()
+  const confirm = useConfirm()
   const [f, setF] = useState({ ...cfg.blank, ...item })
   const set = (patch) => setF((x) => ({ ...x, ...patch }))
   const save = async () => {
@@ -107,9 +108,16 @@ function ItemDialog({ table, item, onClose, onSaved }) {
     }, 'Spremljeno.')
     if (ok) onSaved()
   }
+  const remove = async () => {
+    if (!(await confirm(`Trajno obrisati: ${cfg.one}? Stavka koja se koristi u unosima ne može se obrisati, nego samo deaktivirati.`))) return
+    if (await run(() => db.remove(table, item.id), 'Obrisano.')) onSaved()
+  }
   return (
     <Dialog open title={item ? `Uredi: ${cfg.one}` : `Dodaj: ${cfg.one}`} onClose={onClose} onSubmit={save}
-      footer={<button type="submit" className="btn primary block" disabled={busy}>Spremi</button>}>
+      footer={<>
+        {item && <button type="button" className="btn danger" onClick={remove} disabled={busy} aria-label="Obriši"><Icon name="trash" /></button>}
+        <button type="submit" className="btn primary grow" disabled={busy}>Spremi</button>
+      </>}>
       {cfg.fields(f, set, L)}
       <Check label="Aktivno (nudi se u izbornicima)" checked={f.active} onChange={(v) => set({ active: v })} />
     </Dialog>
@@ -119,6 +127,7 @@ function ItemDialog({ table, item, onClose, onSaved }) {
 function UserDialog({ user, onClose, onSaved }) {
   const { me } = useAuth()
   const [run, busy] = useAction()
+  const confirm = useConfirm()
   const [f, setF] = useState({ username: '', full_name: '', role: 'vozac', active: true, secret: '', ...user })
   const set = (patch) => setF((x) => ({ ...x, ...patch }))
   const driver = f.role === 'vozac'
@@ -140,9 +149,16 @@ function UserDialog({ user, onClose, onSaved }) {
     if (ok) onSaved()
   }
 
+  const remove = async () => {
+    if (!(await confirm(`Trajno obrisati račun „${user.username}”? Korisnik s unosima ne može se obrisati, nego samo deaktivirati.`))) return
+    if (await run(() => db.rpc('delete_user', { p_user: user.id }), 'Račun je obrisan.')) onSaved()
+  }
   return (
     <Dialog open title={user ? 'Korisnik' : 'Novi korisnik'} onClose={onClose} onSubmit={save}
-      footer={<button type="submit" className="btn primary block" disabled={busy}>Spremi</button>}>
+      footer={<>
+        {user && !self && <button type="button" className="btn danger" onClick={remove} disabled={busy} aria-label="Obriši"><Icon name="trash" /></button>}
+        <button type="submit" className="btn primary grow" disabled={busy}>Spremi</button>
+      </>}>
       {user ? <p className="small muted">Korisničko ime: <strong>{user.username}</strong></p> : (
         <Text label="Korisničko ime" hint="mala slova i brojke, npr. marko" value={f.username} onChange={(v) => set({ username: v })}
           autoCapitalize="none" autoCorrect="off" spellCheck="false" />
